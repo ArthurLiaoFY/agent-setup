@@ -8,8 +8,8 @@ Follow these instructions for every task performed in this workspace.
 
 When the user asks to implement, modify, add, refactor, or generate code, consult the project structure guidelines before changing files:
 
-- Project-level rules: `/Users/wr80340/WorkSpace/agent_setup/agnet/fundamental/project_structure/project-level.md`
-- Submodule-level rules: `/Users/wr80340/WorkSpace/agent_setup/agnet/fundamental/project_structure/submodule-level.md`
+- Project-level rules: `agent/fundamental/project_structure/project-level.md`
+- Submodule-level rules: `agent/fundamental/project_structure/submodule-level.md`
 
 Read the applicable guideline(s), then apply them to the generated code.
 

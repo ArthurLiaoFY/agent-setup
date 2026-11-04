@@ -1,0 +1,26 @@
+[project]
+name = "agent-setup"
+version = "0.1.0"
+description = "Install shared AI coding-agent instructions into projects."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[project.scripts]
+agent-setup = "agent_setup.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+agent_setup = ["templates/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

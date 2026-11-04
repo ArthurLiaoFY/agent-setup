@@ -29,3 +29,24 @@ Read the applicable guideline(s), then apply them to the generated code.
 - Do not overwrite existing configuration or dependency declarations without authorization.
 - Ask for clarification when requirements affect project structure and no existing convention resolves the decision.
 - For non-code tasks, use the most relevant workspace documentation instead of applying implementation rules automatically.
+
+## Task Objective
+
+- Read `agent/additional/task_objective.md` at the start of each task to understand the project problem this repository is intended to solve.
+- Keep `agent/additional/task_objective.md` accurate when implementation changes affect the project's purpose or scope.
+- When the task objective is updated, explain the update briefly to the user.
+- `agent/additional/task_objective.md` starts empty and should be updated progressively as facts are established.
+
+## Plan History
+
+- Store all plans created in plan mode under `agent/additional/plans/`.
+- Use one descriptive Markdown file per plan.
+- At the start of a task, review existing plan files for relevant prior decisions and conflicts.
+- When plans conflict, explicitly identify the conflict to the user before proceeding and prefer the most recent validated plan.
+
+## Lesson Learned
+
+- Review `agent/additional/lesson_learned.md` before repeating a workflow.
+- Record lessons as bullet points only, describing the mistake, the correct approach, and the future prevention rule.
+- Add a lesson only when it resulted from observable experience rather than speculation.
+- Keep this file concise and update it when the execution approach materially improves.

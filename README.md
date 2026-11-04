@@ -122,3 +122,32 @@ To install all supported profiles:
 ```bash
 agent-setup install --claude --copilot --codex
 ```
+
+## Rebuild after updating AGENT.md
+
+`AGENT.md` at the repository root is the canonical instruction source. After changing it, run the following from the repository root:
+
+```bash
+uv run pytest -q
+uv build
+ls -l dist
+```
+
+The build synchronizes `AGENT.md` into the Claude, GitHub Copilot, and Codex templates, then creates a wheel and source distribution:
+
+```text
+dist/agent_setup-<version>.whl
+dist/agent_setup-<version>.tar.gz
+```
+
+To replace an existing local uv tool installation:
+
+```bash
+uv tool install --force .
+```
+
+If the project version in `pyproject.toml` is changed, rebuild with the same command:
+
+```bash
+uv build
+```

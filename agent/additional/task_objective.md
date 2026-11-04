@@ -1,0 +1,5 @@
+- Provide one shareable source of coding-agent instructions that can be installed into other projects.
+- Support Claude, GitHub Copilot, and Codex through separate install profiles.
+- Install through Git or uv so users can use the configuration without a PyPI dependency.
+- Keep `AGENT.md` as the canonical source and generate compatible Claude, Copilot, and Codex templates during packaging.
+- Preserve existing target files by default and only overwrite them when `--force` is explicitly used.

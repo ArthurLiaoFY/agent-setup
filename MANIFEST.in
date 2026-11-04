@@ -1,0 +1,2 @@
+include AGENT.md
+recursive-include src/agent_setup/templates *

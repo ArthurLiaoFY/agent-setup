@@ -13,6 +13,15 @@ def test_install_claude(tmp_path: Path) -> None:
     ).read_text()
 
 
+def test_profiles_are_built_from_root_agent(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    canonical = (root / "AGENT.md").read_text()
+
+    assert (root / "src/agent_setup/templates/claude/CLAUDE.md").read_text() == canonical
+    assert (root / "src/agent_setup/templates/copilot/AGENT.md").read_text() == canonical
+    assert (root / "src/agent_setup/templates/codex/AGENTS.md").read_text() == canonical
+
+
 def test_install_copilot(tmp_path: Path) -> None:
     written = install("copilot", tmp_path)
 

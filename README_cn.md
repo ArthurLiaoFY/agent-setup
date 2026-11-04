@@ -177,3 +177,32 @@ pip install agent-setup --claude
 pip install "git+https://github.com/ArthurLiaoFY/agent-setup.git"
 agent-setup install --claude
 ```
+
+## 更新 AGENT.md 後重新打包
+
+儲存庫根目錄的 `AGENT.md` 是唯一的主要指令來源。修改後請在儲存庫根目錄執行：
+
+```bash
+uv run pytest -q
+uv build
+ls -l dist
+```
+
+建置流程會自動把 `AGENT.md` 同步到 Claude、GitHub Copilot 與 Codex 的模板，並產生 wheel 與 source distribution：
+
+```text
+dist/agent_setup-<版本>.whl
+dist/agent_setup-<版本>.tar.gz
+```
+
+若要更新已安裝於本機的 uv tool：
+
+```bash
+uv tool install --force .
+```
+
+如果修改了 `pyproject.toml` 中的專案版本，仍然使用相同指令重新建置：
+
+```bash
+uv build
+```

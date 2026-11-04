@@ -1,78 +1,39 @@
-01. Environment Detection
+# Python Project Setup
 
-辨識目前執行環境
-- OS detection (Windows / macOS / Linux)
-- Python installation & version
-- uv availability & version
-- git availability & version
-- Existing virtual environment
+依序完成下列階段，設定並驗證 Python 專案環境。
 
+## 流程
 
-02. Project Detection
-
-辨識目前專案狀態
-- pyproject.toml
-- uv.lock
-- requirements.txt
-- .python-version
-- Existing project structure
-
-
-03. Environment Initialization
-
-建立開發環境
-- Install uv if necessary
-- Initialize project if new
-- Create .venv
-- Select Python interpreter
-
-
-04. Dependency Setup
-
-處理專案依賴
-- Install dependencies
-- Synchronize lock file
-- Handle development dependencies
-- Preserve existing dependencies
-
-
-05. Project Validation
-
-確認環境是否正確
-- Verify Python interpreter
-- Verify installed packages
-- Verify imports
-- Verify project entry point
-
-## Python Project Setup Workflow
+1. [Environment Detection](environment-detection.md) — 偵測 OS、Python、uv、Git 與虛擬環境。
+2. [Project Detection](project-detection.md) — 偵測專案根目錄、設定檔、依賴來源與專案結構。
+3. [Environment Initialization](environment-initialization.md) — 準備 Python 與 `.venv`。
+4. [Dependency Setup](dependency-setup.md) — 安裝並同步依賴。
+5. [Project Validation](project-validation.md) — 驗證 Python、依賴、匯入與入口點。
 
 ```mermaid
-flowchart TD
-    A["01. Environment Detection<br/>OS / Python / uv / Git / Virtual Environment"]
-    B["02. Project Detection<br/>pyproject.toml / uv.lock / requirements.txt<br/>.python-version / Project Structure"]
-    C{"03. Is Environment Initialization Required?"}
-    D["03. Environment Initialization<br/>Install uv if necessary<br/>Initialize project if new<br/>Select Python interpreter<br/>Create .venv"]
-    E["Skip Environment Initialization<br/>Reuse Existing Project Configuration<br/>and Virtual Environment"]
-    F["04. Dependency Setup<br/>Install / Synchronize Dependencies<br/>Update Lockfile if Necessary<br/>Handle Development Dependencies<br/>Preserve Existing Dependencies"]
-    G["05. Project Validation<br/>Verify Python Interpreter<br/>Verify Installed Packages<br/>Verify Imports<br/>Verify Project Entry Point"]
-    H["Project Environment Ready"]
+flowchart LR
+    A[環境偵測] --> B[專案偵測]
+    B --> C[環境初始化]
+    C --> D[依賴設定]
+    D --> E[專案驗證]
+```
 
-    A --> B
-    B --> C
-    C -->|Yes| D
-    C -->|No| E
-    D --> F
-    E --> F
-    F --> G
-    G --> H
+## 執行規則
 
-    classDef detection fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    classDef initialization fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef dependency fill:#fef3c7,stroke:#d97706,color:#78350f
-    classDef validation fill:#d1fae5,stroke:#059669,color:#064e3b
+- 偵測階段不得修改環境或專案檔案。
+- 完成偵測後再執行設定。
+- 優先使用 `uv`；不要將專案現有設定或依賴來源強制改為新架構。
+- 遇到衝突、設定不明或可能破壞既有環境時，先停止並報告。
+- 每個階段完成後回報簡要結果與下一步。
 
-    class A,B detection
-    class D,E initialization
-    class F dependency
-    class G,H validation
+## 階段摘要
+
+每個階段輸出：
+
+```text
+狀態：完成 / 部分完成 / 失敗
+偵測到的設定：
+執行的動作：
+待解決的問題：
+下一步：
 ```

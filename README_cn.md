@@ -198,3 +198,26 @@ uv tool install --force .
 ```bash
 uv build
 ```
+
+
+# 版本更新流程
+## 1. 修改版本號（例如 0.1.0 -> 0.1.1）
+## 編輯 pyproject.toml
+
+## 2. 執行測試
+uv run pytest
+
+## 3. Build
+uv build
+
+## 4. 確認 build artifacts
+ls dist/
+
+## 5. Commit & Push
+git add pyproject.toml src/agent_setup/resources/core/CORE.md
+git commit -m "Update core agent rules"
+git push origin main
+
+## 6. 建立版本標籤（建議）
+git tag v0.1.1
+git push origin v0.1.1

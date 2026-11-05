@@ -4,6 +4,11 @@
 
 Follow these instructions for every task performed in this workspace.
 
+## Instruction Loading Verification
+
+When the user asks for instruction verification,
+report the exact marker: AGENT_SETUP_CORE_LOADED.
+
 ## Code Implementation
 
 When the user asks to implement, modify, add, refactor, or generate code, consult the project structure guidelines before changing files:

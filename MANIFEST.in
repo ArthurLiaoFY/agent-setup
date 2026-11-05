@@ -1,2 +1,2 @@
-include AGENT.md
-recursive-include src/agent_setup/templates *
+recursive-include src/agent_setup/resources *.md
+recursive-include src/agent_setup/resources *.yaml

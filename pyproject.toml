@@ -20,7 +20,10 @@ build-backend = "setuptools.build_meta"
 package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
-agent_setup = ["templates/**/*"]
+agent_setup = [
+    "resources/**/*.md",
+    "resources/**/*.yaml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

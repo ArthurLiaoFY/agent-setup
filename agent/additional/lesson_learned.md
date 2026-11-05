@@ -1,4 +1,0 @@
-- Package template sources drift when Claude, Copilot, and Codex files are maintained independently; keep the root `AGENT.md` as the canonical source.
-- Build hooks can be loaded differently during isolated builds; define custom setuptools commands in `setup.py` instead of importing a separate build-hook module.
-- Source distributions must explicitly include the canonical `AGENT.md`; use `MANIFEST.in` to ensure wheel-from-sdist builds can regenerate templates.
-- Verify template synchronization with tests and rebuild both the source distribution and wheel, not only the editable environment.

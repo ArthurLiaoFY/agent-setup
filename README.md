@@ -1,35 +1,25 @@
-├── agent/
-│   ├── AGENT.md
-│   │
-│   ├── fundamental/
-│   │   ├── environment.md
-│   │   ├── project-startup.md
-│   │   ├── project-structures.md
-│   │   ├── dependency-management.md
-│   │   ├── coding-conventions.md
-│   │   └── verification.md
-│   │
-│   └── additional/
-│       ├── tooling/
-│       │   ├── git.md
-│       │   ├── linting.md
-│       │   └── testing.md
-│       │
-│       ├── skills/
-│       │   ├── code-search/
-│       │   │   └── SKILL.md
-│       │   └── code-review/
-│       │       └── SKILL.md
-│       │
-│       └── integrations/
-│           ├── mcp.md
-│           └── external-tools.md
-│
-└── ...
+src/agent_setup/resources/
+├── core/
+│   └── CORE.md
+├── adapters/
+│   ├── claude/
+│   │   └── CLAUDE.md
+│   ├── codex/
+│   │   └── AGENTS.md
+│   └── copilot/
+│       └── copilot-instructions.md
+└── rules/
+    ├── fundamental/
+    │   └── project_structure/
+    │       ├── project-level.md
+    │       └── submodule-level.md
+    └── additional/
+        ├── lesson_learned.md
+        └── task_objective.md
 
 # agent-setup
 
-`agent-setup` is a command-line installer for shared AI coding-agent instructions. It installs packaged instruction templates without requiring Python code to be added to the target project.
+`agent-setup` is a command-line installer for shared AI coding-agent instructions. It installs packaged core rules, agent adapters, and project rules without requiring Python code to be added to the target project.
 
 ## Install the command
 
@@ -93,6 +83,15 @@ This creates:
 /path/to/project/CLAUDE.md
 ```
 
+It also creates the shared rules used by the adapter:
+
+```text
+/path/to/project/agent_rules/
+├── CORE.md
+├── fundamental/
+└── additional/
+```
+
 For GitHub Copilot:
 
 ```bash
@@ -104,6 +103,8 @@ This creates:
 ```text
 /path/to/project/.github/copilot-instructions.md
 ```
+
+Copilot also receives the shared rules under `/path/to/project/agent_rules/`.
 
 For Codex:
 
@@ -117,15 +118,26 @@ This creates:
 /path/to/project/AGENTS.md
 ```
 
+Codex also receives:
+
+```text
+/path/to/project/agent_rules/
+├── CORE.md
+├── fundamental/
+└── additional/
+```
+
 To install all supported profiles:
 
 ```bash
 agent-setup install --claude --copilot --codex
 ```
 
-## Rebuild after updating AGENT.md
+Installing multiple profiles installs their entry files and shares the same `agent_rules/` rules directory. Existing files are preserved unless `--force` is specified.
 
-`AGENT.md` at the repository root is the canonical instruction source. After changing it, run the following from the repository root:
+## Rebuild after updating Agent resources
+
+Shared behavior lives in `src/agent_setup/resources/core/CORE.md`. Tool-specific entry points live under `src/agent_setup/resources/adapters/`. After changing them, run the following from the repository root:
 
 ```bash
 uv run pytest -q
@@ -133,7 +145,7 @@ uv build
 ls -l dist
 ```
 
-The build synchronizes `AGENT.md` into the Claude, GitHub Copilot, and Codex templates, then creates a wheel and source distribution:
+The build creates a wheel and source distribution containing all resources:
 
 ```text
 dist/agent_setup-<version>.whl

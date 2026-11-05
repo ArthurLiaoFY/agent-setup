@@ -1,0 +1,4 @@
+- Package adapter sources drift when Claude, Copilot, and Codex files contain the complete shared instruction set independently; keep shared behavior in `resources/core/CORE.md`.
+- Tool-specific behavior belongs in `resources/adapters/<agent>/`; compose it with core rules during installation.
+- Source distributions and wheels must explicitly include Markdown under `src/agent_setup/resources`; verify both MANIFEST.in and pyproject.toml package data.
+- Verify template synchronization with tests and rebuild both the source distribution and wheel, not only the editable environment.

@@ -178,9 +178,9 @@ pip install "git+https://github.com/ArthurLiaoFY/agent-setup.git"
 agent-setup install --claude
 ```
 
-## 更新 AGENT.md 後重新打包
+## 更新 Agent 資源後重新打包
 
-儲存庫根目錄的 `AGENT.md` 是唯一的主要指令來源。修改後請在儲存庫根目錄執行：
+共用行為位於 `src/agent_setup/resources/core/CORE.md`，各工具入口位於 `src/agent_setup/resources/adapters/`。修改後請在儲存庫根目錄執行：
 
 ```bash
 uv run pytest -q
@@ -188,7 +188,7 @@ uv build
 ls -l dist
 ```
 
-建置流程會自動把 `AGENT.md` 同步到 Claude、GitHub Copilot 與 Codex 的模板，並產生 wheel 與 source distribution：
+建置流程會產生包含所有 Agent 資源的 wheel 與 source distribution：
 
 ```text
 dist/agent_setup-<版本>.whl

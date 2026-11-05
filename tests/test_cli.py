@@ -58,3 +58,30 @@ def test_cli_status_and_uninstall(tmp_path: Path, capsys) -> None:
     assert main(["uninstall", str(tmp_path)]) == 0
     assert objective.read_text() == "user objective"
     assert not (tmp_path / "AGENTS.md").exists()
+
+
+def test_uninstall_rejects_manifest_path_traversal(tmp_path: Path, capsys) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = __import__("json").loads(manifest.read_text())
+    outside = tmp_path.parent / "outside.txt"
+    outside.write_text("outside")
+    data["managedFiles"]["../../outside.txt"] = __import__("hashlib").sha256(
+        b"outside"
+    ).hexdigest()
+    manifest.write_text(__import__("json").dumps(data))
+
+    assert main(["uninstall", str(tmp_path)]) == 1
+    assert outside.read_text() == "outside"
+    assert "invalid" in capsys.readouterr().err.lower()
+
+
+def test_uninstall_removes_multiple_profiles(tmp_path: Path) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    assert main(["install", "--claude", str(tmp_path)]) == 0
+    assert main(["install", "--copilot", str(tmp_path)]) == 0
+
+    assert main(["uninstall", str(tmp_path)]) == 0
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert not (tmp_path / "CLAUDE.md").exists()
+    assert not (tmp_path / ".github" / "copilot-instructions.md").exists()

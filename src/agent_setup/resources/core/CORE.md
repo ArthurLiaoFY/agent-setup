@@ -4,11 +4,6 @@
 
 Follow these instructions for every task performed in this workspace.
 
-## Instruction Loading Verification
-
-When the user asks for instruction verification,
-report the exact marker: AGENT_SETUP_CORE_LOADED.
-
 ## Code Implementation
 
 When the user asks to implement, modify, add, refactor, or generate code, consult the project structure guidelines before changing files:
@@ -37,7 +32,7 @@ Read the applicable guideline(s), then apply them to the generated code.
 
 ## Task Objective
 
-- Read `.agent_rules/additional/task_objective.md` at the start of each task to understand the project problem this repository is intended to solve.
+- Read `.agent_rules/additional/task_objective.md` when the project objective is needed to make a task decision.
 - Before reading or updating the task objective, read `.agent_rules/fundamental/task_objective_instruction.md`.
 - Keep `.agent_rules/additional/task_objective.md` accurate when implementation changes affect the project's purpose or scope.
 - When the task objective is updated, explain the update briefly to the user.
@@ -47,7 +42,8 @@ Read the applicable guideline(s), then apply them to the generated code.
 
 ## Plan History
 
-- Save every implementation plan, created in plan mode or any other context, to `.agent_rules/additional/plans/PLAN-XXXX.md`.
+- Save implementation plans when the work is complex, the user requests a plan, or the project workflow requires a plan.
+- Store saved implementation plans at `.agent_rules/additional/plans/PLAN-XXXX.md`.
 - Assign the next plan number after the highest existing `PLAN-XXXX.md` file.
 - Use kebab-case text after the plan number only when necessary, for example `PLAN-0002-install-codex.md`.
 - Create `.agent_rules/additional/plans/` when the plan is saved.
@@ -57,7 +53,7 @@ Read the applicable guideline(s), then apply them to the generated code.
 - Do not present an implementation plan only in chat. Save the plan first, then reference its path.
 - Use a descriptive kebab-case filename with the required plan-number prefix, for example `PLAN-0001-install-codex-profile.md`.
 - Use one descriptive Markdown file per plan.
-- At the start of a task, review existing plan files for relevant prior decisions and conflicts.
+- When an existing plan is relevant, review it for prior decisions and conflicts.
 - When plans conflict, explicitly identify the conflict to the user before proceeding and prefer the most recent validated plan.
 
 ## Lesson Learned

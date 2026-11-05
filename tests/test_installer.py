@@ -155,8 +155,8 @@ def test_existing_adapter_is_overwritten(tmp_path: Path) -> None:
     destination.write_text("existing")
 
     written = install("claude", tmp_path)
-    assert destination.read_text() != "existing"
-    assert destination in written.overwritten
+    assert destination.read_text() == "existing"
+    assert destination in written.preserved
 
 
 def test_unknown_profile(tmp_path: Path) -> None:
@@ -174,8 +174,8 @@ def test_existing_core_is_overwritten(tmp_path: Path) -> None:
 
     written = install("codex", tmp_path)
 
-    assert core.read_text() != "custom core"
-    assert core in written.overwritten
+    assert core.read_text() == "custom core"
+    assert core in written.preserved
 
 
 def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
@@ -185,8 +185,8 @@ def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
 
     written = install("codex", tmp_path)
 
-    assert rule.read_text() != "custom rule"
-    assert rule in written.overwritten
+    assert rule.read_text() == "custom rule"
+    assert rule in written.preserved
 
 
 def test_existing_additional_is_preserved(tmp_path: Path) -> None:
@@ -371,3 +371,36 @@ def test_resource_read_failure_does_not_modify_target(tmp_path: Path, monkeypatc
     else:
         raise AssertionError("InstallError was not raised")
     assert not target.exists()
+
+
+def test_modified_adapter_is_preserved_on_reinstall(tmp_path: Path) -> None:
+    install("codex", tmp_path)
+    adapter = tmp_path / "AGENTS.md"
+    adapter.write_text("user customization")
+
+    written = install("codex", tmp_path)
+
+    assert adapter.read_text() == "user customization"
+    assert adapter in written.preserved
+
+
+def test_write_failure_rolls_back_previous_files(tmp_path: Path, monkeypatch) -> None:
+    original_replace = installer_module.os.replace
+    replace_count = 0
+
+    def fail_after_first(source, destination):
+        nonlocal replace_count
+        replace_count += 1
+        if replace_count == 2:
+            raise OSError("simulated write failure")
+        original_replace(source, destination)
+
+    monkeypatch.setattr(installer_module.os, "replace", fail_after_first)
+
+    try:
+        install("codex", tmp_path)
+    except InstallError:
+        pass
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert not (tmp_path / "AGENTS.md").exists()

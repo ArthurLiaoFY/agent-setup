@@ -4,7 +4,7 @@
 
 Define the required layout for a Python project when generating or modifying code.
 
-Every project must follow this top-level structure:
+Use the following layout when it matches a new or existing Python project:
 
 ```text
 project/

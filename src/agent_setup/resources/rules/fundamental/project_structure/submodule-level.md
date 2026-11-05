@@ -4,7 +4,7 @@
 
 Define the required internal layout for a Python submodule when generating or modifying implementation code.
 
-Every major submodule must follow this structure:
+Use the following layout when a Python submodule needs an implementation factory:
 
 ```text
 submodule/

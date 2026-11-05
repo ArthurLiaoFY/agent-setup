@@ -143,8 +143,20 @@ agent-setup install --copilot /path/to/project
 ```
 
 Reinstallation keeps existing project-specific `.agent_rules/additional/` files. Adapter, `CORE.md`,
-and `fundamental/` files are central-managed and overwritten. The generic `--force` option is
-not supported because these ownership rules apply automatically.
+and `fundamental/` files are central-managed. Existing unowned files are preserved. Files previously
+installed by this tool are updated only when their contents still match the installation manifest.
+
+## Manage the installation
+
+```bash
+agent-setup status /path/to/project
+agent-setup plan add "Optimize installer" /path/to/project
+agent-setup lesson add "Installer rollback" /path/to/project
+agent-setup uninstall /path/to/project
+```
+
+Plan and lesson files receive sequential identifiers. Uninstall removes unchanged managed files and
+preserves files that users have modified.
 
 ## Rebuild after updating Agent resources
 

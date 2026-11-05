@@ -145,8 +145,19 @@ agent-setup install --claude --global
 ```
 
 重複安裝時，Adapter、`.agent_rules/CORE.md` 與 `.agent_rules/fundamental/` 會更新；現有的
-`.agent_rules/additional/` 檔案會保留，不會被覆寫。`--force` 已移除，因為檔案歸屬規則會
-自動套用。
+`.agent_rules/additional/` 檔案會保留，不會被覆寫。未由本工具管理的既有檔案會保留；
+只有內容仍符合 Manifest 雜湊的既有管理檔案才會更新。`--force` 已移除。
+
+## 管理安裝
+
+```bash
+agent-setup status /path/to/project
+agent-setup plan add "Optimize installer" /path/to/project
+agent-setup lesson add "Installer rollback" /path/to/project
+agent-setup uninstall /path/to/project
+```
+
+Plan 與 Lesson 會使用連續編號。解除安裝只會刪除未修改的管理檔案，並保留使用者修改過的檔案。
 
 ## 確認安裝結果
 

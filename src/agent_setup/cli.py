@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import sys
 from pathlib import Path
 
-from .installer import InstallError, install, profiles_requested
+from .installer import InstallError, install, profiles_requested, read_install_manifest
 from .knowledge import create_lesson, create_plan
 
 
@@ -103,7 +104,30 @@ def main(argv: list[str] | None = None) -> int:
         if not manifest.is_file():
             print(f"Not installed: {target}")
             return 0
-        adapter = __import__("json").loads(manifest.read_text(encoding="utf-8")).get("profile")
+        try:
+            data = read_install_manifest(target)
+        except InstallError as error:
+            print(f"agent-setup: error: {error}", file=sys.stderr)
+            return 1
+        if target.resolve() != manifest.parent.resolve().parent.resolve():
+            print("agent-setup: error: invalid installation manifest location", file=sys.stderr)
+            return 1
+        profiles = data.get("profiles", [data.get("profile")] if data.get("profile") else [])
+        allowed = {
+            ".agent_rules/CORE.md",
+        }
+        from .manifest import ADAPTER_DESTINATIONS
+        for installed_profile in profiles:
+            for relative in ADAPTER_DESTINATIONS.get(installed_profile, ()):
+                allowed.add(relative.as_posix())
+        for relative in data["managedFiles"]:
+            path = (target / relative).resolve()
+            if (
+                target.resolve() not in path.parents
+                or (relative not in allowed and not relative.startswith(".agent_rules/"))
+            ):
+                print(f"agent-setup: error: invalid managed path: {relative}", file=sys.stderr)
+                return 1
         managed_files = __import__("json").loads(manifest.read_text(encoding="utf-8")).get(
             "managedFiles", {}
         )

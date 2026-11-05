@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Iterable
 import json
 import hashlib
+import os
+import tempfile
 
 from .manifest import (
     ADDITIONAL_DESTINATION,
@@ -62,16 +64,23 @@ def install(profile: str, target: str | Path) -> InstallResult:
     except OSError as error:
         raise InstallError(f"Cannot install files under {target}: {error}") from error
 
-    for item in plan:
-        try:
-            _write_bytes(item.destination, item.content, result, overwrite=item.overwrite)
-        except OSError as error:
-            raise InstallError(f"Cannot write {item.destination}: {error}") from error
+    backups: dict[Path, bytes | None] = {}
     try:
+        for item in plan:
+            _write_bytes(item.destination, item.content, result, overwrite=item.overwrite, target=target, backups=backups)
         for relative in ADDITIONAL_DIRECTORIES:
             (target / Path(*relative.parts)).mkdir(parents=True, exist_ok=True)
         _write_local_manifest(target, profile, result)
     except OSError as error:
+        for destination in reversed(list(backups)):
+            try:
+                if backups[destination] is None:
+                    destination.unlink(missing_ok=True)
+                else:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(backups[destination])
+            except OSError:
+                pass
         raise InstallError(f"Cannot initialize agent rule directories under {target}: {error}") from error
     result.sort()
     result.created.sort()
@@ -88,28 +97,75 @@ def destinations_source_name(profile: str) -> str:
     }[profile]
 
 
+def read_install_manifest(target: Path) -> dict:
+    destination = target / Path(*MANAGED_LOCAL_MANIFEST.parts)
+    try:
+        data = json.loads(destination.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise InstallError(f"Invalid installation manifest: {error}") from error
+    if not isinstance(data, dict) or data.get("version") != 1:
+        raise InstallError("Invalid installation manifest version")
+    profiles = data.get("profiles", [data.get("profile")] if data.get("profile") else [])
+    managed = data.get("managedFiles", {})
+    if not isinstance(profiles, list) or not all(isinstance(item, str) for item in profiles):
+        raise InstallError("Invalid installation manifest profiles")
+    if not isinstance(managed, dict):
+        raise InstallError("Invalid installation manifest managedFiles")
+    for relative, digest in managed.items():
+        if not isinstance(relative, str) or not isinstance(digest, str):
+            raise InstallError("Invalid installation manifest managedFiles entry")
+        path = Path(relative)
+        if path.is_absolute() or ".." in path.parts or len(digest) != 64:
+            raise InstallError(f"Invalid installation manifest path: {relative}")
+        resolved = (target / path).resolve()
+        if resolved != target.resolve() and target.resolve() not in resolved.parents:
+            raise InstallError(f"Installation manifest path escapes target: {relative}")
+    return data
+
+
 def _write_local_manifest(target: Path, profile: str, result: InstallResult) -> None:
     destination = target / Path(*MANAGED_LOCAL_MANIFEST.parts)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "profile": profile,
-                "managedDirectories": ["/".join(path.parts) for path in ADDITIONAL_DIRECTORIES],
-                "managedFiles": {
-                    path.relative_to(target).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-                    for path in result.written
-                    if path.is_file()
-                    and path != target / Path(*MANAGED_LOCAL_MANIFEST.parts)
-                },
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    existing = {}
+    if destination.exists():
+        existing = read_install_manifest(target)
+    profiles = set(existing.get("profiles", []))
+    if existing.get("profile"):
+        profiles.add(existing["profile"])
+    profiles.add(profile)
+    old_managed = existing.get("managedFiles", {})
+    managed: dict[str, str] = {}
+    for relative, digest in old_managed.items():
+        path = target / Path(relative)
+        if path.is_file() and sha256(path) == digest:
+            managed[relative] = digest
+    managed.update({
+        path.relative_to(target).as_posix(): sha256(path)
+        for path in result.written
+        if path.is_file()
+    })
+    content = json.dumps(
+        {
+            "version": 1,
+            "profile": profile,
+            "profiles": sorted(profiles),
+            "managedDirectories": ["/".join(path.parts) for path in ADDITIONAL_DIRECTORIES],
+            "managedFiles": managed,
+        },
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    fd, temporary = tempfile.mkstemp(dir=destination.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    except OSError:
+        if Path(temporary).exists():
+            Path(temporary).unlink()
+        raise
 
 
 class InstallPlanItem:
@@ -187,14 +243,44 @@ def _read_resource(source, display_path) -> bytes:
         raise InstallError(f"Cannot read packaged resource {display_path}: {error}") from error
 
 
-def _write_bytes(destination: Path, data: bytes, result: InstallResult, *, overwrite: bool) -> None:
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_bytes(
+    destination: Path,
+    data: bytes,
+    result: InstallResult,
+    *,
+    overwrite: bool,
+    target: Path,
+    backups: dict[Path, bytes | None],
+) -> None:
     existed = destination.exists()
     if existed and not overwrite:
         result.preserved.append(destination)
         return
-
+    if existed and overwrite:
+        manifest = read_install_manifest(target) if (target / Path(*MANAGED_LOCAL_MANIFEST.parts)).exists() else {}
+        relative = destination.relative_to(target).as_posix()
+        managed_hash = manifest.get("managedFiles", {}).get(relative)
+        if managed_hash != sha256(destination):
+            result.preserved.append(destination)
+            return
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(data)
+    if destination not in backups:
+        backups[destination] = destination.read_bytes() if existed else None
+    fd, temporary = tempfile.mkstemp(dir=destination.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    except OSError:
+        if Path(temporary).exists():
+            Path(temporary).unlink()
+        raise
     result.append(destination)
     (result.overwritten if existed else result.created).append(destination)
 

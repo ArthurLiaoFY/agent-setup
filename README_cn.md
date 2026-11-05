@@ -144,8 +144,8 @@ agent-setup install --claude /path/to/project
 agent-setup install --claude --global
 ```
 
-重複安裝時，Adapter、`agent_rules/CORE.md` 與 `agent_rules/fundamental/` 會更新；現有的
-`agent_rules/additional/` 檔案會保留，不會被覆寫。`--force` 已移除，因為檔案歸屬規則會
+重複安裝時，Adapter、`.agent_rules/CORE.md` 與 `.agent_rules/fundamental/` 會更新；現有的
+`.agent_rules/additional/` 檔案會保留，不會被覆寫。`--force` 已移除，因為檔案歸屬規則會
 自動套用。
 
 ## 確認安裝結果

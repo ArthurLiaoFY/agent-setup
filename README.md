@@ -86,7 +86,7 @@ This creates:
 It also creates the shared rules used by the adapter:
 
 ```text
-/path/to/project/agent_rules/
+/path/to/project/.agent_rules/
 ├── CORE.md
 ├── fundamental/
 └── additional/
@@ -104,7 +104,7 @@ This creates:
 /path/to/project/.github/copilot-instructions.md
 ```
 
-Copilot also receives the shared rules under `/path/to/project/agent_rules/`.
+Copilot also receives the shared rules under `/path/to/project/.agent_rules/`.
 
 For Codex:
 
@@ -121,7 +121,7 @@ This creates:
 Codex also receives:
 
 ```text
-/path/to/project/agent_rules/
+/path/to/project/.agent_rules/
 ├── CORE.md
 ├── fundamental/
 └── additional/
@@ -140,7 +140,7 @@ agent-setup install --codex /path/to/project
 agent-setup install --copilot /path/to/project
 ```
 
-Reinstallation keeps existing project-specific `agent_rules/additional/` files. Adapter, `CORE.md`,
+Reinstallation keeps existing project-specific `.agent_rules/additional/` files. Adapter, `CORE.md`,
 and `fundamental/` files are central-managed and overwritten. The generic `--force` option is
 not supported because these ownership rules apply automatically.
 

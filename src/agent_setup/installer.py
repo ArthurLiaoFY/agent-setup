@@ -108,7 +108,7 @@ def _build_installation_plan(
     adapter = _read_resource(adapter_source, adapter_source)
     core = _read_resource(core_source, Path("resources/core/CORE.md"))
 
-    resources = [(core_source, core, target / "agent_rules" / "CORE.md", True)]
+    resources = [(core_source, core, target / ".agent_rules" / "CORE.md", True)]
     _validate_resource_directory(rules_root.joinpath("fundamental"))
     _validate_resource_directory(rules_root.joinpath("additional"))
 
@@ -118,10 +118,10 @@ def _build_installation_plan(
         _read_resource(rules_root.joinpath(relative), Path("resources/rules") / relative)
     for source, relative in _iter_resource_files(fundamental_root):
         content = _read_resource(source, Path("resources/rules/fundamental") / relative)
-        resources.append((source, content, target / "agent_rules" / "fundamental" / relative, True))
+        resources.append((source, content, target / ".agent_rules" / "fundamental" / relative, True))
     for source, relative in _iter_resource_files(additional_root):
         content = _read_resource(source, Path("resources/rules/additional") / relative)
-        resources.append((source, content, target / "agent_rules" / "additional" / relative, False))
+        resources.append((source, content, target / ".agent_rules" / "additional" / relative, False))
 
     adapter_destination = {
         "claude": target / "CLAUDE.md",

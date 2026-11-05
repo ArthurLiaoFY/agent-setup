@@ -33,7 +33,7 @@ def test_install_claude(tmp_path: Path) -> None:
     assert tmp_path / "CLAUDE.md" in written
     installed = (tmp_path / "CLAUDE.md").read_text()
     assert "# Claude Code Adapter" in installed
-    assert "@agent_rules/CORE.md" in installed
+    assert "@.agent_rules/CORE.md" in installed
 
 
 def test_root_entries_reference_canonical_rules(tmp_path: Path) -> None:
@@ -60,12 +60,12 @@ def test_install_codex(tmp_path: Path) -> None:
 def test_install_includes_core_and_rules(tmp_path: Path) -> None:
     install("codex", tmp_path)
 
-    assert (tmp_path / "agent_rules" / "CORE.md").is_file()
+    assert (tmp_path / ".agent_rules" / "CORE.md").is_file()
     assert (
-        tmp_path / "agent_rules" / "fundamental" / "project_structure" / "project-level.md"
+        tmp_path / ".agent_rules" / "fundamental" / "project_structure" / "project-level.md"
     ).is_file()
     assert (
-        tmp_path / "agent_rules" / "fundamental" / "project_structure" / "submodule-level.md"
+        tmp_path / ".agent_rules" / "fundamental" / "project_structure" / "submodule-level.md"
     ).is_file()
 
 
@@ -73,7 +73,7 @@ def test_installed_adapter_references_installed_core(tmp_path: Path) -> None:
     install("codex", tmp_path)
 
     entry = tmp_path / "AGENTS.md"
-    assert "agent_rules/CORE.md" in entry.read_text()
+    assert ".agent_rules/CORE.md" in entry.read_text()
 
 
 def test_repeated_install_overwrites_managed_files(tmp_path: Path) -> None:
@@ -97,7 +97,7 @@ def test_multiple_profiles_share_installed_rules(tmp_path: Path) -> None:
     assert tmp_path / "CLAUDE.md" in written
     assert tmp_path / ".github" / "copilot-instructions.md" in written
     assert tmp_path / "AGENTS.md" in written
-    assert (tmp_path / "agent_rules" / "CORE.md").is_file()
+    assert (tmp_path / ".agent_rules" / "CORE.md").is_file()
 
 
 def test_existing_adapter_is_overwritten(tmp_path: Path) -> None:
@@ -118,7 +118,7 @@ def test_unknown_profile(tmp_path: Path) -> None:
 
 
 def test_existing_core_is_overwritten(tmp_path: Path) -> None:
-    core = tmp_path / "agent_rules" / "CORE.md"
+    core = tmp_path / ".agent_rules" / "CORE.md"
     core.parent.mkdir(parents=True)
     core.write_text("custom core")
 
@@ -129,7 +129,7 @@ def test_existing_core_is_overwritten(tmp_path: Path) -> None:
 
 
 def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
-    rule = tmp_path / "agent_rules" / "fundamental" / "project_structure" / "project-level.md"
+    rule = tmp_path / ".agent_rules" / "fundamental" / "project_structure" / "project-level.md"
     rule.parent.mkdir(parents=True)
     rule.write_text("custom rule")
 
@@ -140,7 +140,7 @@ def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
 
 
 def test_existing_additional_is_preserved(tmp_path: Path) -> None:
-    rule = tmp_path / "agent_rules" / "additional" / "task_objective.md"
+    rule = tmp_path / ".agent_rules" / "additional" / "task_objective.md"
     rule.parent.mkdir(parents=True)
     rule.write_text("user objective")
 
@@ -153,7 +153,7 @@ def test_existing_additional_is_preserved(tmp_path: Path) -> None:
 def test_missing_additional_is_installed(tmp_path: Path) -> None:
     install("codex", tmp_path)
 
-    assert (tmp_path / "agent_rules" / "additional" / "task_objective.md").is_file()
+    assert (tmp_path / ".agent_rules" / "additional" / "task_objective.md").is_file()
 
 
 def test_unrelated_file_is_preserved(tmp_path: Path) -> None:
@@ -182,7 +182,7 @@ def test_install_accepts_string_target(tmp_path: Path) -> None:
 
 
 def test_nested_additional_is_preserved(tmp_path: Path) -> None:
-    nested = tmp_path / "agent_rules" / "additional" / "nested" / "custom.md"
+    nested = tmp_path / ".agent_rules" / "additional" / "nested" / "custom.md"
     nested.parent.mkdir(parents=True)
     nested.write_text("custom")
 
@@ -192,7 +192,7 @@ def test_nested_additional_is_preserved(tmp_path: Path) -> None:
 
 
 def test_stale_fundamental_is_not_deleted(tmp_path: Path) -> None:
-    stale = tmp_path / "agent_rules" / "fundamental" / "stale.md"
+    stale = tmp_path / ".agent_rules" / "fundamental" / "stale.md"
     stale.parent.mkdir(parents=True)
     stale.write_text("keep stale")
 
@@ -204,21 +204,21 @@ def test_stale_fundamental_is_not_deleted(tmp_path: Path) -> None:
 def test_claude_adapter_uses_native_core_import() -> None:
     source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/claude/CLAUDE.md"
     content = source.read_text()
-    assert "@agent_rules/CORE.md" in content
-    assert content.count("@agent_rules/CORE.md") == 1
+    assert "@.agent_rules/CORE.md" in content
+    assert content.count("@.agent_rules/CORE.md") == 1
 
 
 def test_codex_adapter_explicitly_reads_core() -> None:
     source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/codex/AGENTS.md"
     content = source.read_text()
-    assert "Read `agent_rules/CORE.md`" in content
+    assert "Read `.agent_rules/CORE.md`" in content
     assert "# Scope" not in content
 
 
 def test_copilot_adapter_explicitly_reads_core() -> None:
     source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/copilot/copilot-instructions.md"
     content = source.read_text()
-    assert "Read `agent_rules/CORE.md`" in content
+    assert "Read `.agent_rules/CORE.md`" in content
     assert "# Scope" not in content
 
 

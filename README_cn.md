@@ -102,10 +102,10 @@ agent-setup install --copilot
 /path/to/project/.github/copilot-instructions.md
 ```
 
-同時安裝兩種設定：
+另外指定目標專案安裝：
 
 ```bash
-agent-setup install --claude --copilot
+agent-setup install --claude /path/to/project
 ```
 
 安裝 Codex 設定：
@@ -120,11 +120,7 @@ agent-setup install --codex
 /path/to/project/AGENTS.md
 ```
 
-同時安裝所有支援的設定：
-
-```bash
-agent-setup install --claude --copilot --codex
-```
+每次安裝只能選擇一種 Agent profile。若要安裝多種設定，請分別執行對應指令。
 
 ## 其他選項
 
@@ -142,19 +138,15 @@ agent-setup install --claude C:\path\to\project
 agent-setup install --claude /path/to/project
 ```
 
-覆寫已存在的設定檔：
-
-```bash
-agent-setup install --claude --force
-```
-
 將 Claude 設定安裝到目前使用者的 Claude 設定目錄：
 
 ```bash
 agent-setup install --claude --global
 ```
 
-預設情況下，已存在的設定檔不會被覆寫。只有明確要取代現有檔案時才使用 `--force`。
+重複安裝時，Adapter、`agent_rules/CORE.md` 與 `agent_rules/fundamental/` 會更新；現有的
+`agent_rules/additional/` 檔案會保留，不會被覆寫。`--force` 已移除，因為檔案歸屬規則會
+自動套用。
 
 ## 確認安裝結果
 

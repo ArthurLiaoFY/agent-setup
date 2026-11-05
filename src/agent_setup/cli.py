@@ -15,17 +15,18 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     install_parser = commands.add_parser("install", help="Install an instruction profile")
-    install_parser.add_argument(
+    profile_group = install_parser.add_mutually_exclusive_group(required=True)
+    profile_group.add_argument(
         "--claude",
         action="store_true",
         help="Install Claude instructions as CLAUDE.md",
     )
-    install_parser.add_argument(
+    profile_group.add_argument(
         "--copilot",
         action="store_true",
         help="Install Copilot instructions in .github/copilot-instructions.md",
     )
-    install_parser.add_argument(
+    profile_group.add_argument(
         "--codex",
         action="store_true",
         help="Install Codex instructions as AGENTS.md",
@@ -35,11 +36,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="global_install",
         help="Install for Claude under the current user's ~/.claude directory",
-    )
-    install_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing instruction files",
     )
     install_parser.add_argument(
         "path",
@@ -52,30 +48,42 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as error:
+        return 0 if error.code == 0 else 1
 
     profiles = list(
         profiles_requested(claude=args.claude, copilot=args.copilot, codex=args.codex)
     )
-    if not profiles:
-        parser.error("choose at least one of --claude, --copilot, or --codex")
     if args.global_install:
         if args.copilot or args.codex or args.path is not None:
             parser.error("--global currently supports --claude without a target path")
         targets = [Path.home() / ".claude"]
     else:
         targets = [args.path.expanduser() if args.path else Path.cwd()]
+    target_files = [target for target in targets if target.exists() and target.is_file()]
+    if target_files:
+        print(
+            f"agent-setup: error: target path must be a directory: {target_files[0]}",
+            file=sys.stderr,
+        )
+        return 1
 
     try:
         for target in targets:
             target.mkdir(parents=True, exist_ok=True)
             for profile in profiles:
-                written = install(profile, target, force=args.force)
-                for path in written:
-                    print(f"Installed {path}")
-                if not written:
-                    print(f"{profile}: no changes (use --force to overwrite)")
-    except InstallError as error:
+                result = install(profile, target)
+                for path in result.created:
+                    print(f"Created {path}")
+                for path in result.overwritten:
+                    print(f"Overwritten {path}")
+                for path in result.preserved:
+                    print(f"Preserved {path}")
+                if not result:
+                    print(f"{profile}: no changes")
+    except (InstallError, OSError) as error:
         print(f"agent-setup: error: {error}", file=sys.stderr)
         return 1
 

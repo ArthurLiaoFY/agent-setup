@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from importlib.resources import as_file, files
+from importlib.resources import files
 from pathlib import Path
 from typing import Iterable
 
@@ -9,8 +9,29 @@ class InstallError(RuntimeError):
     """Raised when an installation cannot be completed safely."""
 
 
-def install(profile: str, target: Path, *, force: bool = False) -> list[Path]:
+REQUIRED_RULE_FILES = (
+    Path("fundamental/project_structure/project-level.md"),
+    Path("fundamental/project_structure/submodule-level.md"),
+    Path("additional/task_objective.md"),
+    Path("additional/lesson_learned.md"),
+)
+
+
+class InstallResult(list[Path]):
+    def __init__(self) -> None:
+        super().__init__()
+        self.created: list[Path] = []
+        self.overwritten: list[Path] = []
+        self.preserved: list[Path] = []
+
+    @property
+    def written(self) -> list[Path]:
+        return self.created + self.overwritten
+
+
+def install(profile: str, target: str | Path) -> InstallResult:
     """Install one profile into target and return the files that were written."""
+    target = Path(target)
     if profile == "claude":
         destinations = {
             "CLAUDE.md": target / "CLAUDE.md",
@@ -29,56 +50,135 @@ def install(profile: str, target: Path, *, force: bool = False) -> list[Path]:
     resource_root = files("agent_setup").joinpath("resources")
     adapter_root = resource_root.joinpath("adapters", profile)
     core_rules = resource_root.joinpath("core", "CORE.md")
-    written: list[Path] = []
+    result = InstallResult()
 
-    written.extend(_install_rules(resource_root.joinpath("rules"), target / "agent_rules", force))
-    core_destination = target / "agent_rules" / "CORE.md"
-    if not core_destination.exists() or force:
-        core_destination.parent.mkdir(parents=True, exist_ok=True)
-        core_destination.write_text(core_rules.read_text())
-        written.append(core_destination)
+    if target.exists() and not target.is_dir():
+        raise InstallError(f"Target path is not a directory: {target}")
 
-    for source_name, destination in destinations.items():
-        source = adapter_root.joinpath(source_name)
-        if not source.is_file():
-            raise InstallError(f"Missing packaged adapter: {source_name}")
-        if destination.exists() and not force:
+    adapter_name = destinations_source_name(profile)
+    adapter_source = adapter_root.joinpath(adapter_name)
+    plan = _build_installation_plan(
+        profile=profile,
+        adapter_source=adapter_source,
+        core_source=core_rules,
+        rules_root=resource_root.joinpath("rules"),
+        target=target,
+    )
+
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise InstallError(f"Cannot install files under {target}: {error}") from error
+
+    for item in plan:
+        try:
+            _write_bytes(item.destination, item.content, result, overwrite=item.overwrite)
+        except OSError as error:
+            raise InstallError(f"Cannot write {item.destination}: {error}") from error
+    result.sort()
+    result.created.sort()
+    result.overwritten.sort()
+    result.preserved.sort()
+    return result
+
+
+def destinations_source_name(profile: str) -> str:
+    return {
+        "claude": "CLAUDE.md",
+        "codex": "AGENTS.md",
+        "copilot": "copilot-instructions.md",
+    }[profile]
+
+
+class InstallPlanItem:
+    def __init__(self, destination: Path, content: bytes, *, overwrite: bool) -> None:
+        self.destination = destination
+        self.content = content
+        self.overwrite = overwrite
+
+
+def _build_installation_plan(
+    *,
+    profile: str,
+    adapter_source,
+    core_source,
+    rules_root,
+    target: Path,
+) -> list[InstallPlanItem]:
+    adapter = _read_resource(adapter_source, adapter_source)
+    core = _read_resource(core_source, Path("resources/core/CORE.md"))
+
+    resources = [(core_source, core, target / "agent_rules" / "CORE.md", True)]
+    _validate_resource_directory(rules_root.joinpath("fundamental"))
+    _validate_resource_directory(rules_root.joinpath("additional"))
+
+    fundamental_root = rules_root.joinpath("fundamental")
+    additional_root = rules_root.joinpath("additional")
+    for relative in REQUIRED_RULE_FILES:
+        _read_resource(rules_root.joinpath(relative), Path("resources/rules") / relative)
+    for source, relative in _iter_resource_files(fundamental_root):
+        content = _read_resource(source, Path("resources/rules/fundamental") / relative)
+        resources.append((source, content, target / "agent_rules" / "fundamental" / relative, True))
+    for source, relative in _iter_resource_files(additional_root):
+        content = _read_resource(source, Path("resources/rules/additional") / relative)
+        resources.append((source, content, target / "agent_rules" / "additional" / relative, False))
+
+    adapter_destination = {
+        "claude": target / "CLAUDE.md",
+        "copilot": target / ".github" / "copilot-instructions.md",
+        "codex": target / "AGENTS.md",
+    }[profile]
+    resources.append((adapter_source, adapter, adapter_destination, True))
+
+    target_resolved = target.resolve()
+    plan: list[InstallPlanItem] = []
+    for source, content, destination, overwrite in resources:
+        destination_resolved = destination.resolve()
+        if destination_resolved != target_resolved and target_resolved not in destination_resolved.parents:
+            raise InstallError(f"Destination is outside target project: {destination} (source: {source})")
+        plan.append(InstallPlanItem(destination, content, overwrite=overwrite))
+    return plan
+
+
+def _validate_resource_directory(directory) -> None:
+    if not directory.is_dir():
+        raise InstallError(f"Missing packaged resource directory: {directory}")
+    if not list(_iter_resource_files(directory)):
+        raise InstallError(f"Missing packaged resources: {directory}")
+
+
+def _iter_resource_files(directory):
+    for source in sorted(directory.iterdir(), key=lambda item: item.name):
+        if source.name == ".DS_Store":
             continue
-
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        with as_file(source) as source_path:
-            adapter_text = source_path.read_text()
-        output = adapter_text.rstrip() + "\n\n" + core_rules.read_text()
-        destination.write_text(output)
-        written.append(destination)
-    written.sort()
-
-    return written
+        if source.is_dir():
+            for child, child_relative in _iter_resource_files(source):
+                yield child, Path(source.name) / child_relative
+        elif source.is_file():
+            yield source, Path(source.name)
 
 
-def _install_rules(
-    source_root,
-    destination_root: Path,
-    force: bool,
-) -> list[Path]:
-    written: list[Path] = []
+def _read_resource(source, display_path) -> bytes:
+    try:
+        if not source.is_file():
+            raise InstallError(f"Missing packaged resource: {display_path}")
+        return source.read_bytes()
+    except InstallError:
+        raise
+    except (OSError, IOError) as error:
+        raise InstallError(f"Cannot read packaged resource {display_path}: {error}") from error
 
-    def copy_directory(directory, relative_parent: Path) -> None:
-        for source in directory.iterdir():
-            relative_path = relative_parent / source.name
-            destination = destination_root / relative_path
-            if source.is_dir():
-                copy_directory(source, relative_path)
-            elif source.is_file() and source.name != ".DS_Store":
-                if destination.exists() and not force:
-                    continue
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                with as_file(source) as source_path:
-                    destination.write_bytes(source_path.read_bytes())
-                written.append(destination)
 
-    copy_directory(source_root, Path())
-    return written
+def _write_bytes(destination: Path, data: bytes, result: InstallResult, *, overwrite: bool) -> None:
+    existed = destination.exists()
+    if existed and not overwrite:
+        result.preserved.append(destination)
+        return
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(data)
+    result.append(destination)
+    (result.overwritten if existed else result.created).append(destination)
 
 
 def profiles_requested(*, claude: bool, copilot: bool, codex: bool) -> Iterable[str]:

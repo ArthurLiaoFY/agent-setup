@@ -1,6 +1,30 @@
 from pathlib import Path
+import shutil
+
+import agent_setup.installer as installer_module
 
 from agent_setup.installer import InstallError, install
+
+
+def copy_resources(tmp_path: Path) -> Path:
+    package_root = tmp_path / "package"
+    source = Path(__file__).parents[1] / "src" / "agent_setup" / "resources"
+    shutil.copytree(source, package_root / "resources")
+    return package_root
+
+
+def assert_target_unchanged(target: Path, snapshot: dict[str, bytes] | None = None) -> None:
+    if not target.exists():
+        return
+    if snapshot is None:
+        assert [path.name for path in target.iterdir()] == []
+        return
+    actual = {
+        str(path.relative_to(target)): path.read_bytes()
+        for path in target.rglob("*")
+        if path.is_file()
+    }
+    assert actual == snapshot
 
 
 def test_install_claude(tmp_path: Path) -> None:
@@ -9,7 +33,7 @@ def test_install_claude(tmp_path: Path) -> None:
     assert tmp_path / "CLAUDE.md" in written
     installed = (tmp_path / "CLAUDE.md").read_text()
     assert "# Claude Code Adapter" in installed
-    assert "# Agent Instructions" in installed
+    assert "@agent_rules/CORE.md" in installed
 
 
 def test_root_entries_reference_canonical_rules(tmp_path: Path) -> None:
@@ -52,7 +76,7 @@ def test_installed_adapter_references_installed_core(tmp_path: Path) -> None:
     assert "agent_rules/CORE.md" in entry.read_text()
 
 
-def test_repeated_install_does_not_overwrite(tmp_path: Path) -> None:
+def test_repeated_install_overwrites_managed_files(tmp_path: Path) -> None:
     install("codex", tmp_path)
     destination = tmp_path / "AGENTS.md"
     original = destination.read_text()
@@ -60,7 +84,7 @@ def test_repeated_install_does_not_overwrite(tmp_path: Path) -> None:
     written = install("codex", tmp_path)
 
     assert destination.read_text() == original
-    assert destination not in written
+    assert destination in written.overwritten
 
 
 def test_multiple_profiles_share_installed_rules(tmp_path: Path) -> None:
@@ -76,15 +100,13 @@ def test_multiple_profiles_share_installed_rules(tmp_path: Path) -> None:
     assert (tmp_path / "agent_rules" / "CORE.md").is_file()
 
 
-def test_existing_file_requires_force(tmp_path: Path) -> None:
+def test_existing_adapter_is_overwritten(tmp_path: Path) -> None:
     destination = tmp_path / "CLAUDE.md"
     destination.write_text("existing")
 
     written = install("claude", tmp_path)
-    assert destination not in written
-
-    install("claude", tmp_path, force=True)
     assert destination.read_text() != "existing"
+    assert destination in written.overwritten
 
 
 def test_unknown_profile(tmp_path: Path) -> None:
@@ -93,3 +115,200 @@ def test_unknown_profile(tmp_path: Path) -> None:
     except InstallError:
         return
     raise AssertionError("InstallError was not raised")
+
+
+def test_existing_core_is_overwritten(tmp_path: Path) -> None:
+    core = tmp_path / "agent_rules" / "CORE.md"
+    core.parent.mkdir(parents=True)
+    core.write_text("custom core")
+
+    written = install("codex", tmp_path)
+
+    assert core.read_text() != "custom core"
+    assert core in written.overwritten
+
+
+def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
+    rule = tmp_path / "agent_rules" / "fundamental" / "project_structure" / "project-level.md"
+    rule.parent.mkdir(parents=True)
+    rule.write_text("custom rule")
+
+    written = install("codex", tmp_path)
+
+    assert rule.read_text() != "custom rule"
+    assert rule in written.overwritten
+
+
+def test_existing_additional_is_preserved(tmp_path: Path) -> None:
+    rule = tmp_path / "agent_rules" / "additional" / "task_objective.md"
+    rule.parent.mkdir(parents=True)
+    rule.write_text("user objective")
+
+    written = install("codex", tmp_path)
+
+    assert rule.read_text() == "user objective"
+    assert rule in written.preserved
+
+
+def test_missing_additional_is_installed(tmp_path: Path) -> None:
+    install("codex", tmp_path)
+
+    assert (tmp_path / "agent_rules" / "additional" / "task_objective.md").is_file()
+
+
+def test_unrelated_file_is_preserved(tmp_path: Path) -> None:
+    unrelated = tmp_path / "README.md"
+    unrelated.write_text("keep me")
+
+    install("codex", tmp_path)
+
+    assert unrelated.read_text() == "keep me"
+
+
+def test_regular_file_target_is_rejected(tmp_path: Path) -> None:
+    target = tmp_path / "project"
+    target.write_text("file")
+
+    try:
+        install("codex", target)
+    except InstallError:
+        return
+    raise AssertionError("InstallError was not raised")
+
+
+def test_install_accepts_string_target(tmp_path: Path) -> None:
+    written = install("codex", str(tmp_path))
+    assert tmp_path / "AGENTS.md" in written
+
+
+def test_nested_additional_is_preserved(tmp_path: Path) -> None:
+    nested = tmp_path / "agent_rules" / "additional" / "nested" / "custom.md"
+    nested.parent.mkdir(parents=True)
+    nested.write_text("custom")
+
+    install("codex", tmp_path)
+
+    assert nested.read_text() == "custom"
+
+
+def test_stale_fundamental_is_not_deleted(tmp_path: Path) -> None:
+    stale = tmp_path / "agent_rules" / "fundamental" / "stale.md"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("keep stale")
+
+    install("codex", tmp_path)
+
+    assert stale.read_text() == "keep stale"
+
+
+def test_claude_adapter_uses_native_core_import() -> None:
+    source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/claude/CLAUDE.md"
+    content = source.read_text()
+    assert "@agent_rules/CORE.md" in content
+    assert content.count("@agent_rules/CORE.md") == 1
+
+
+def test_codex_adapter_explicitly_reads_core() -> None:
+    source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/codex/AGENTS.md"
+    content = source.read_text()
+    assert "Read `agent_rules/CORE.md`" in content
+    assert "# Scope" not in content
+
+
+def test_copilot_adapter_explicitly_reads_core() -> None:
+    source = Path(__file__).parents[1] / "src/agent_setup/resources/adapters/copilot/copilot-instructions.md"
+    content = source.read_text()
+    assert "Read `agent_rules/CORE.md`" in content
+    assert "# Scope" not in content
+
+
+def test_missing_adapter_resource_does_not_modify_target(tmp_path: Path, monkeypatch) -> None:
+    package_root = copy_resources(tmp_path)
+    (package_root / "resources" / "adapters" / "codex" / "AGENTS.md").unlink()
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    target = tmp_path / "target"
+
+    try:
+        install("codex", target)
+    except InstallError as error:
+        assert "AGENTS.md" in str(error)
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert not target.exists()
+
+
+def test_missing_core_resource_does_not_modify_target(tmp_path: Path, monkeypatch) -> None:
+    package_root = copy_resources(tmp_path)
+    (package_root / "resources" / "core" / "CORE.md").unlink()
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    target = tmp_path / "target"
+
+    try:
+        install("codex", target)
+    except InstallError as error:
+        assert "CORE.md" in str(error)
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert not target.exists()
+
+
+def test_missing_fundamental_resource_does_not_modify_existing_target(
+    tmp_path: Path, monkeypatch
+) -> None:
+    package_root = copy_resources(tmp_path)
+    (package_root / "resources" / "rules" / "fundamental" / "project_structure" / "project-level.md").unlink()
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    target = tmp_path / "target"
+    target.mkdir()
+    sentinel = target / "sentinel.txt"
+    sentinel.write_text("unchanged")
+
+    try:
+        install("codex", target)
+    except InstallError:
+        pass
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert sentinel.read_text() == "unchanged"
+
+
+def test_missing_additional_resource_does_not_modify_existing_target(
+    tmp_path: Path, monkeypatch
+) -> None:
+    package_root = copy_resources(tmp_path)
+    (package_root / "resources" / "rules" / "additional" / "task_objective.md").unlink()
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    target = tmp_path / "target"
+    target.mkdir()
+    sentinel = target / "sentinel.txt"
+    sentinel.write_text("unchanged")
+
+    try:
+        install("codex", target)
+    except InstallError:
+        pass
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert sentinel.read_text() == "unchanged"
+
+
+def test_resource_read_failure_does_not_modify_target(tmp_path: Path, monkeypatch) -> None:
+    package_root = copy_resources(tmp_path)
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    original_read_resource = installer_module._read_resource
+
+    def unreadable(source, display_path):
+        if Path(str(display_path)).name == "lesson_learned.md":
+            raise installer_module.InstallError(f"Cannot read packaged resource {display_path}: simulated")
+        return original_read_resource(source, display_path)
+
+    monkeypatch.setattr(installer_module, "_read_resource", unreadable)
+    target = tmp_path / "target"
+
+    try:
+        install("codex", target)
+    except InstallError as error:
+        assert "lesson_learned.md" in str(error)
+    else:
+        raise AssertionError("InstallError was not raised")
+    assert not target.exists()

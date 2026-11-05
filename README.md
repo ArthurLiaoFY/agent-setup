@@ -127,13 +127,22 @@ Codex also receives:
 └── additional/
 ```
 
-To install all supported profiles:
+Only one Agent profile can be selected per command:
 
 ```bash
-agent-setup install --claude --copilot --codex
+agent-setup install --claude
 ```
 
-Installing multiple profiles installs their entry files and shares the same `agent_rules/` rules directory. Existing files are preserved unless `--force` is specified.
+Run the command separately for each Agent:
+
+```bash
+agent-setup install --codex /path/to/project
+agent-setup install --copilot /path/to/project
+```
+
+Reinstallation keeps existing project-specific `agent_rules/additional/` files. Adapter, `CORE.md`,
+and `fundamental/` files are central-managed and overwritten. The generic `--force` option is
+not supported because these ownership rules apply automatically.
 
 ## Rebuild after updating Agent resources
 

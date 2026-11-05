@@ -38,6 +38,7 @@ Read the applicable guideline(s), then apply them to the generated code.
 ## Task Objective
 
 - Read `.agent_rules/additional/task_objective.md` at the start of each task to understand the project problem this repository is intended to solve.
+- Before reading or updating the task objective, read `.agent_rules/fundamental/task_objective_instruction.md`.
 - Keep `.agent_rules/additional/task_objective.md` accurate when implementation changes affect the project's purpose or scope.
 - When the task objective is updated, explain the update briefly to the user.
 - `.agent_rules/additional/task_objective.md` starts empty and should be updated progressively as facts are established.
@@ -46,14 +47,25 @@ Read the applicable guideline(s), then apply them to the generated code.
 
 ## Plan History
 
-- Store all plans created in plan mode under `.agent_rules/additional/plans/`.
+- Save every implementation plan, created in plan mode or any other context, to `.agent_rules/additional/plans/PLAN-XXXX.md`.
+- Assign the next plan number after the highest existing `PLAN-XXXX.md` file.
+- Use kebab-case text after the plan number only when necessary, for example `PLAN-0002-install-codex.md`.
+- Create `.agent_rules/additional/plans/` when the plan is saved.
+- Before you write an implementation plan, read `.agent_rules/fundamental/plan_template_instruction.md`.
+- Follow the structure and section order in `plan_template_instruction.md`.
+- Write the plan in ASD-STE100 controlled English.
+- Do not present an implementation plan only in chat. Save the plan first, then reference its path.
+- Use a descriptive kebab-case filename with the required plan-number prefix, for example `PLAN-0001-install-codex-profile.md`.
 - Use one descriptive Markdown file per plan.
 - At the start of a task, review existing plan files for relevant prior decisions and conflicts.
 - When plans conflict, explicitly identify the conflict to the user before proceeding and prefer the most recent validated plan.
 
 ## Lesson Learned
 
-- Review `.agent_rules/additional/lesson_learned.md` before repeating a workflow.
+- Review `.agent_rules/fundamental/lesson_learned_instruction.md` before recording a lesson.
+- Review lesson files in `.agent_rules/additional/lesson_learned/` before repeating a workflow.
+- Record each new lesson in `.agent_rules/additional/lesson_learned/LESSON-XXXX.md`.
+- Assign the next lesson number after the highest existing `LESSON-XXXX.md` file.
 - Record lessons as bullet points only, describing the mistake, the correct approach, and the future prevention rule.
 - Add a lesson only when it resulted from observable experience rather than speculation.
 - Keep this file concise and update it when the execution approach materially improves.

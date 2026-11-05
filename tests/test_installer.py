@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import shutil
 
 import agent_setup.installer as installer_module
@@ -41,6 +42,55 @@ def test_root_entries_reference_canonical_rules(tmp_path: Path) -> None:
     canonical_link = "src/agent_setup/resources/core/CORE.md"
 
     assert canonical_link in (root / "AGENTS.md").read_text()
+
+
+def test_readme_resource_inventory_matches_packaged_files() -> None:
+    root = Path(__file__).parents[1]
+    resource_root = root / "src" / "agent_setup" / "resources"
+    readme_lines = (root / "README.md").read_text().splitlines()
+    inventory_start = readme_lines.index("src/agent_setup/resources/") + 1
+
+    documented: set[Path] = set()
+    directories: list[str] = []
+    for line in readme_lines[inventory_start:]:
+        if not line.strip():
+            break
+        match = re.fullmatch(r"((?:│   |    )*)(?:├── |└── )(.+)", line)
+        assert match is not None, f"Invalid resource tree line: {line}"
+
+        depth = len(match.group(1)) // 4
+        entry = match.group(2)
+        directories = directories[:depth]
+        if entry.endswith("/"):
+            directories.append(entry[:-1])
+        else:
+            documented.add(Path(*directories, entry))
+
+    actual = {
+        path.relative_to(resource_root)
+        for path in resource_root.rglob("*")
+        if path.is_file() and path.name != ".DS_Store"
+    }
+    assert documented == actual
+
+
+def test_install_includes_every_packaged_rule_resource(tmp_path: Path) -> None:
+    resource_root = Path(__file__).parents[1] / "src" / "agent_setup" / "resources" / "rules"
+
+    install("codex", tmp_path)
+
+    expected = {
+        Path(".agent_rules") / path.relative_to(resource_root)
+        for path in resource_root.rglob("*")
+        if path.is_file() and path.name != ".DS_Store"
+    }
+    installed = {
+        path.relative_to(tmp_path)
+        for path in (tmp_path / ".agent_rules").rglob("*")
+        if path.is_file()
+        and path.name not in {"CORE.md", "manifest.json"}
+    }
+    assert installed == expected
 
 
 def test_install_copilot(tmp_path: Path) -> None:
@@ -154,6 +204,15 @@ def test_missing_additional_is_installed(tmp_path: Path) -> None:
     install("codex", tmp_path)
 
     assert (tmp_path / ".agent_rules" / "additional" / "task_objective.md").is_file()
+    assert (
+        tmp_path / ".agent_rules" / "fundamental" / "plan_template_instruction.md"
+    ).is_file()
+    assert (
+        tmp_path / ".agent_rules" / "additional" / "plans"
+    ).is_dir()
+    assert (
+        tmp_path / ".agent_rules" / "additional" / "lesson_learned"
+    ).is_dir()
 
 
 def test_unrelated_file_is_preserved(tmp_path: Path) -> None:
@@ -298,7 +357,7 @@ def test_resource_read_failure_does_not_modify_target(tmp_path: Path, monkeypatc
     original_read_resource = installer_module._read_resource
 
     def unreadable(source, display_path):
-        if Path(str(display_path)).name == "lesson_learned.md":
+        if Path(str(display_path)).name == "task_objective.md":
             raise installer_module.InstallError(f"Cannot read packaged resource {display_path}: simulated")
         return original_read_resource(source, display_path)
 
@@ -308,7 +367,7 @@ def test_resource_read_failure_does_not_modify_target(tmp_path: Path, monkeypatc
     try:
         install("codex", target)
     except InstallError as error:
-        assert "lesson_learned.md" in str(error)
+        assert "task_objective.md" in str(error)
     else:
         raise AssertionError("InstallError was not raised")
     assert not target.exists()

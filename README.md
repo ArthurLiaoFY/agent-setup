@@ -10,11 +10,13 @@ src/agent_setup/resources/
 │       └── copilot-instructions.md
 └── rules/
     ├── fundamental/
+    │   ├── lesson_learned_instruction.md
+    │   ├── plan_template_instruction.md
+    │   ├── task_objective_instruction.md
     │   └── project_structure/
     │       ├── project-level.md
     │       └── submodule-level.md
     └── additional/
-        ├── lesson_learned.md
         └── task_objective.md
 
 # agent-setup

@@ -1,8 +1,0 @@
-- Provide one shareable source of coding-agent instructions that can be installed into other projects.
-- Support Claude, GitHub Copilot, and Codex through separate install profiles.
-- Install through Git or uv so users can use the configuration without a PyPI dependency.
-- Keep `resources/core/CORE.md` as the canonical shared-agent source and compose it with tool-specific adapters during installation.
-- This file is project-specific.
-- Preserve an existing project objective without overwriting it.
-- Install this file only when it does not already exist in the target project.
-- Record only confirmed scope, requirements, constraints, and success criteria.

@@ -6,6 +6,7 @@ from typing import Iterable
 import json
 import hashlib
 import os
+import re
 import tempfile
 
 from .manifest import (
@@ -66,12 +67,14 @@ def install(profile: str, target: str | Path) -> InstallResult:
 
     backups: dict[Path, bytes | None] = {}
     try:
+        manifest_path = target / Path(*MANAGED_LOCAL_MANIFEST.parts)
+        backups.setdefault(manifest_path, manifest_path.read_bytes() if manifest_path.is_file() else None)
         for item in plan:
             _write_bytes(item.destination, item.content, result, overwrite=item.overwrite, target=target, backups=backups)
         for relative in ADDITIONAL_DIRECTORIES:
             (target / Path(*relative.parts)).mkdir(parents=True, exist_ok=True)
         _write_local_manifest(target, profile, result)
-    except OSError as error:
+    except Exception as error:
         for destination in reversed(list(backups)):
             try:
                 if backups[destination] is None:
@@ -81,6 +84,8 @@ def install(profile: str, target: str | Path) -> InstallResult:
                     destination.write_bytes(backups[destination])
             except OSError:
                 pass
+        if isinstance(error, InstallError):
+            raise
         raise InstallError(f"Cannot initialize agent rule directories under {target}: {error}") from error
     result.sort()
     result.created.sort()
@@ -105,9 +110,14 @@ def read_install_manifest(target: Path) -> dict:
         raise InstallError(f"Invalid installation manifest: {error}") from error
     if not isinstance(data, dict) or data.get("version") != 1:
         raise InstallError("Invalid installation manifest version")
-    profiles = data.get("profiles", [data.get("profile")] if data.get("profile") else [])
+    profile = data.get("profile")
+    if "profile" in data and (not isinstance(profile, str) or profile not in ADAPTER_DESTINATIONS):
+        raise InstallError("Invalid installation manifest profile")
+    profiles = data.get("profiles", [profile] if profile else [])
     managed = data.get("managedFiles", {})
-    if not isinstance(profiles, list) or not all(isinstance(item, str) for item in profiles):
+    if not isinstance(profiles, list) or not all(
+        isinstance(item, str) and item in ADAPTER_DESTINATIONS for item in profiles
+    ):
         raise InstallError("Invalid installation manifest profiles")
     if not isinstance(managed, dict):
         raise InstallError("Invalid installation manifest managedFiles")
@@ -115,7 +125,7 @@ def read_install_manifest(target: Path) -> dict:
         if not isinstance(relative, str) or not isinstance(digest, str):
             raise InstallError("Invalid installation manifest managedFiles entry")
         path = Path(relative)
-        if path.is_absolute() or ".." in path.parts or len(digest) != 64:
+        if path.is_absolute() or ".." in path.parts or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None:
             raise InstallError(f"Invalid installation manifest path: {relative}")
         resolved = (target / path).resolve()
         if resolved != target.resolve() and target.resolve() not in resolved.parents:

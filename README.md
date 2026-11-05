@@ -142,6 +142,12 @@ agent-setup install --codex /path/to/project
 agent-setup install --copilot /path/to/project
 ```
 
+Install Claude instructions in the current user's Claude configuration directory:
+
+```bash
+agent-setup install --claude --global
+```
+
 Reinstallation keeps existing project-specific `.agent_rules/additional/` files. Adapter, `CORE.md`,
 and `fundamental/` files are central-managed. Existing unowned files are preserved. Files previously
 installed by this tool are updated only when their contents still match the installation manifest.

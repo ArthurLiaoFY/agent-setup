@@ -4,7 +4,12 @@
 
 Define the required layout for a Python project when generating or modifying code.
 
-Use the following layout when it matches a new or existing Python project:
+The following layout is an optional example for a new Python project. First follow the existing
+project architecture and team conventions. Use this example only when it fits the project or when
+the user requests it:
+
+The guidance below applies only when this layout fits the project. Do not add files or move code
+solely to match this example.
 
 ```text
 project/
@@ -18,7 +23,10 @@ project/
 └── tests/
 ```
 
-## Required Files
+## Example File Responsibilities
+
+The files and responsibilities below are examples. A project does not need `config.yaml` or
+`main.py` when its existing architecture uses different configuration or entry-point conventions.
 
 ### `config.yaml`
 

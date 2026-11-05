@@ -4,7 +4,12 @@
 
 Define the required internal layout for a Python submodule when generating or modifying implementation code.
 
-Use the following layout when a Python submodule needs an implementation factory:
+The following layout is an optional example for a submodule that needs multiple interchangeable
+implementations. First follow the project's existing architecture and team conventions. Use this
+example only when it fits the project or when the user requests it:
+
+The file roles and implementation pattern below apply only when the project uses this structure.
+Do not add a factory, version directories, or other layers solely to match this example.
 
 ```text
 submodule/
@@ -179,7 +184,7 @@ Keep tests for the contract, factory, implementations, and fixtures together wit
 7. Preserve backward compatibility with existing factory names and public exports unless migration is explicitly requested.
 8. Add contract tests, factory tests, and implementation tests for new behavior.
 
-## Default Implementation Pattern
+## Example Implementation Pattern
 
 ```text
 Client
@@ -188,7 +193,8 @@ Client
   -> module_vN/implementation.py: concrete behavior
 ```
 
-Generated client code must call the public API or factory rather than importing concrete implementation classes directly.
+When using this pattern, client code should call the public API or factory rather than import
+concrete implementation classes directly.
 
 ## Completion
 

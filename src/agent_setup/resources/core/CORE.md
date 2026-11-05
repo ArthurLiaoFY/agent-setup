@@ -42,19 +42,11 @@ Read the applicable guideline(s), then apply them to the generated code.
 
 ## Plan History
 
-- Save implementation plans when the work is complex, the user requests a plan, or the project workflow requires a plan.
-- Store saved implementation plans at `.agent_rules/additional/plans/PLAN-XXXX.md`.
-- Assign the next plan number after the highest existing `PLAN-XXXX.md` file.
-- Use kebab-case text after the plan number only when necessary, for example `PLAN-0002-install-codex.md`.
-- Create `.agent_rules/additional/plans/` when the plan is saved.
-- Before you write an implementation plan, read `.agent_rules/fundamental/plan_template_instruction.md`.
-- Follow the structure and section order in `plan_template_instruction.md`.
-- Write the plan in ASD-STE100 controlled English.
-- Do not present an implementation plan only in chat. Save the plan first, then reference its path.
-- Use a descriptive kebab-case filename with the required plan-number prefix, for example `PLAN-0001-install-codex-profile.md`.
-- Use one descriptive Markdown file per plan.
+- Save an implementation plan when the work is complex, the user requests one, or the project workflow requires one.
+- Follow the project's existing plan location, naming, language, and format conventions.
+- Use `.agent_rules/additional/plans/` and its template only when they fit the project conventions or the user requests them.
 - When an existing plan is relevant, review it for prior decisions and conflicts.
-- When plans conflict, explicitly identify the conflict to the user before proceeding and prefer the most recent validated plan.
+- Resolve conflicts according to the project's established process. Ask the user only when that process does not resolve the conflict.
 
 ## Lesson Learned
 

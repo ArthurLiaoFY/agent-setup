@@ -1,4 +1,6 @@
 from pathlib import Path
+import hashlib
+import json
 
 from agent_setup.cli import main
 
@@ -74,6 +76,39 @@ def test_uninstall_rejects_manifest_path_traversal(tmp_path: Path, capsys) -> No
     assert main(["uninstall", str(tmp_path)]) == 1
     assert outside.read_text() == "outside"
     assert "invalid" in capsys.readouterr().err.lower()
+
+
+def test_uninstall_rejects_unowned_agent_rules_path(tmp_path: Path, capsys) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    note = tmp_path / ".agent_rules" / "additional" / "my-notes.md"
+    note.write_text("user notes")
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = json.loads(manifest.read_text())
+    data["managedFiles"][".agent_rules/additional/my-notes.md"] = hashlib.sha256(
+        note.read_bytes()
+    ).hexdigest()
+    manifest.write_text(json.dumps(data))
+
+    assert main(["uninstall", str(tmp_path)]) == 1
+    assert note.read_text() == "user notes"
+    assert "invalid managed path" in capsys.readouterr().err.lower()
+
+
+def test_uninstall_reuses_validated_manifest_data(tmp_path: Path, monkeypatch) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    import agent_setup.cli as cli_module
+
+    original_read = cli_module.read_install_manifest
+    calls = 0
+
+    def count_reads(target):
+        nonlocal calls
+        calls += 1
+        return original_read(target)
+
+    monkeypatch.setattr(cli_module, "read_install_manifest", count_reads)
+    assert main(["uninstall", str(tmp_path)]) == 0
+    assert calls == 1
 
 
 def test_uninstall_removes_multiple_profiles(tmp_path: Path) -> None:

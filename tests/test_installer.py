@@ -1,10 +1,11 @@
 from pathlib import Path
+import json
 import re
 import shutil
 
 import agent_setup.installer as installer_module
 
-from agent_setup.installer import InstallError, install
+from agent_setup.installer import InstallError, install, read_install_manifest
 
 
 def copy_resources(tmp_path: Path) -> Path:
@@ -150,7 +151,7 @@ def test_multiple_profiles_share_installed_rules(tmp_path: Path) -> None:
     assert (tmp_path / ".agent_rules" / "CORE.md").is_file()
 
 
-def test_existing_adapter_is_overwritten(tmp_path: Path) -> None:
+def test_existing_adapter_is_preserved(tmp_path: Path) -> None:
     destination = tmp_path / "CLAUDE.md"
     destination.write_text("existing")
 
@@ -167,7 +168,7 @@ def test_unknown_profile(tmp_path: Path) -> None:
     raise AssertionError("InstallError was not raised")
 
 
-def test_existing_core_is_overwritten(tmp_path: Path) -> None:
+def test_existing_core_is_preserved(tmp_path: Path) -> None:
     core = tmp_path / ".agent_rules" / "CORE.md"
     core.parent.mkdir(parents=True)
     core.write_text("custom core")
@@ -178,7 +179,7 @@ def test_existing_core_is_overwritten(tmp_path: Path) -> None:
     assert core in written.preserved
 
 
-def test_existing_fundamental_is_overwritten(tmp_path: Path) -> None:
+def test_existing_fundamental_is_preserved(tmp_path: Path) -> None:
     rule = tmp_path / ".agent_rules" / "fundamental" / "project_structure" / "project-level.md"
     rule.parent.mkdir(parents=True)
     rule.write_text("custom rule")
@@ -384,18 +385,48 @@ def test_modified_adapter_is_preserved_on_reinstall(tmp_path: Path) -> None:
     assert adapter in written.preserved
 
 
+def test_manifest_rejects_invalid_legacy_profile(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    manifest.parent.mkdir()
+    manifest.write_text(json.dumps({"version": 1, "profile": ["codex"], "managedFiles": {}}))
+
+    try:
+        read_install_manifest(tmp_path)
+    except InstallError as error:
+        assert "profile" in str(error)
+    else:
+        raise AssertionError("InstallError was not raised")
+
+
+def test_manifest_rejects_non_hex_digest(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    manifest.parent.mkdir()
+    manifest.write_text(json.dumps({
+        "version": 1,
+        "profile": "codex",
+        "managedFiles": {"AGENTS.md": "g" * 64},
+    }))
+
+    try:
+        read_install_manifest(tmp_path)
+    except InstallError as error:
+        assert "path" in str(error)
+    else:
+        raise AssertionError("InstallError was not raised")
+
+
 def test_write_failure_rolls_back_previous_files(tmp_path: Path, monkeypatch) -> None:
-    original_replace = installer_module.os.replace
-    replace_count = 0
+    original_write = installer_module._write_bytes
+    write_count = 0
 
-    def fail_after_first(source, destination):
-        nonlocal replace_count
-        replace_count += 1
-        if replace_count == 2:
-            raise OSError("simulated write failure")
-        original_replace(source, destination)
+    def fail_after_first(*args, **kwargs):
+        nonlocal write_count
+        write_count += 1
+        if write_count == 2:
+            raise TypeError("simulated non-I/O failure")
+        original_write(*args, **kwargs)
 
-    monkeypatch.setattr(installer_module.os, "replace", fail_after_first)
+    monkeypatch.setattr(installer_module, "_write_bytes", fail_after_first)
 
     try:
         install("codex", tmp_path)
@@ -403,4 +434,4 @@ def test_write_failure_rolls_back_previous_files(tmp_path: Path, monkeypatch) ->
         pass
     else:
         raise AssertionError("InstallError was not raised")
-    assert not (tmp_path / "AGENTS.md").exists()
+    assert_target_unchanged(tmp_path, {})

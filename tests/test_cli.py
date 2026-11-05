@@ -62,6 +62,17 @@ def test_cli_status_and_uninstall(tmp_path: Path, capsys) -> None:
     assert not (tmp_path / "AGENTS.md").exists()
 
 
+def test_status_reports_invalid_utf8_manifest(tmp_path: Path, capsys) -> None:
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_bytes(b"\xff")
+
+    assert main(["status", str(tmp_path)]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "agent-setup: error: Invalid installation manifest" in captured.err
+
+
 def test_uninstall_rejects_manifest_path_traversal(tmp_path: Path, capsys) -> None:
     assert main(["install", "--codex", str(tmp_path)]) == 0
     manifest = tmp_path / ".agent_rules" / "manifest.json"

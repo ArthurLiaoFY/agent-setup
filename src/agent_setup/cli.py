@@ -100,8 +100,13 @@ def main(argv: list[str] | None = None) -> int:
         target = args.path.expanduser() if args.path else Path.cwd()
         manifest = target / ".agent_rules" / "manifest.json"
         if manifest.is_file():
+            try:
+                data = read_install_manifest(target)
+            except InstallError as error:
+                print(f"agent-setup: error: {error}", file=sys.stderr)
+                return 1
             print(f"Installed: {target}")
-            print(manifest.read_text(encoding="utf-8").rstrip())
+            print(json.dumps(data, indent=2, sort_keys=True))
         else:
             print(f"Not installed: {target}")
         return 0

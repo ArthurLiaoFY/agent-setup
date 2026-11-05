@@ -105,6 +105,41 @@ def test_uninstall_rejects_unowned_agent_rules_path(tmp_path: Path, capsys) -> N
     assert "invalid managed path" in capsys.readouterr().err.lower()
 
 
+def test_uninstall_accepts_legacy_managed_files(tmp_path: Path) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    retired = {
+        ".agent_rules/additional/plan_template.md": b"old plan template",
+        ".agent_rules/additional/lesson_learned.md": b"old lesson notes",
+    }
+    for relative, content in retired.items():
+        path = tmp_path / relative
+        path.write_bytes(content)
+        data["managedFiles"][relative] = hashlib.sha256(content).hexdigest()
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+
+    assert main(["uninstall", str(tmp_path)]) == 0
+    assert all(not (tmp_path / relative).exists() for relative in retired)
+
+
+def test_uninstall_preserves_modified_legacy_managed_file(tmp_path: Path) -> None:
+    assert main(["install", "--codex", str(tmp_path)]) == 0
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    relative = ".agent_rules/additional/lesson_learned.md"
+    path = tmp_path / relative
+    path.write_text("original packaged lessons", encoding="utf-8")
+    data["managedFiles"][relative] = hashlib.sha256(
+        b"original packaged lessons"
+    ).hexdigest()
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text("user-edited lessons", encoding="utf-8")
+
+    assert main(["uninstall", str(tmp_path)]) == 0
+    assert path.read_text(encoding="utf-8") == "user-edited lessons"
+
+
 def test_uninstall_reuses_validated_manifest_data(tmp_path: Path, monkeypatch) -> None:
     assert main(["install", "--codex", str(tmp_path)]) == 0
     import agent_setup.cli as cli_module

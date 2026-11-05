@@ -26,3 +26,9 @@ REQUIRED_RULE_FILES = (
 )
 
 MANAGED_LOCAL_MANIFEST = PurePosixPath(".agent_rules/manifest.json")
+
+# Files managed by earlier releases but no longer shipped to installed projects.
+RETIRED_MANAGED_FILES = (
+    PurePosixPath(".agent_rules/additional/plan_template.md"),
+    PurePosixPath(".agent_rules/additional/lesson_learned.md"),
+)

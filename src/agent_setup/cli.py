@@ -14,6 +14,7 @@ from .manifest import (
     ADAPTER_DESTINATIONS,
     CORE_DESTINATION,
     FUNDAMENTAL_DESTINATION,
+    RETIRED_MANAGED_FILES,
 )
 
 
@@ -126,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         profiles = data.get("profiles", [data.get("profile")] if data.get("profile") else [])
         allowed = {CORE_DESTINATION.as_posix()}
+        allowed.update(path.as_posix() for path in RETIRED_MANAGED_FILES)
         for installed_profile in profiles:
             for relative in ADAPTER_DESTINATIONS.get(installed_profile, ()):
                 allowed.add(relative.as_posix())
@@ -189,7 +191,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"Overwritten {path}")
                 for path in result.preserved:
                     print(f"Preserved {path}")
-                if not result:
+                for path in result.removed:
+                    print(f"Removed obsolete {path}")
+                if not result and not result.removed:
                     print(f"{profile}: no changes")
     except (InstallError, OSError) as error:
         print(f"agent-setup: error: {error}", file=sys.stderr)

@@ -151,6 +151,9 @@ agent-setup install --claude --global
 Reinstallation keeps existing project-specific `.agent_rules/additional/` files. Adapter, `CORE.md`,
 and `fundamental/` files are central-managed. Existing unowned files are preserved. Files previously
 installed by this tool are updated only when their contents still match the installation manifest.
+The first install after upgrading from a release that included `additional/plan_template.md` or
+`additional/lesson_learned.md` removes unchanged copies of those retired files. Modified copies are
+preserved and removed from the installation manifest.
 
 ## Manage the installation
 

@@ -147,6 +147,8 @@ agent-setup install --claude --global
 重複安裝時，Adapter、`.agent_rules/CORE.md` 與 `.agent_rules/fundamental/` 會更新；現有的
 `.agent_rules/additional/` 檔案會保留，不會被覆寫。未由本工具管理的既有檔案會保留；
 只有內容仍符合 Manifest 雜湊的既有管理檔案才會更新。`--force` 已移除。
+從曾提供 `additional/plan_template.md` 或 `additional/lesson_learned.md` 的舊版升級時，
+第一次重新安裝會移除內容未修改的舊檔；已修改的檔案會保留，並從安裝 Manifest 移除管理紀錄。
 
 ## 管理安裝
 

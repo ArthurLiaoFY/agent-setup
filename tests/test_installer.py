@@ -1,4 +1,5 @@
 from pathlib import Path
+import hashlib
 import json
 import re
 import shutil
@@ -99,6 +100,27 @@ def test_install_copilot(tmp_path: Path) -> None:
 
     assert tmp_path / ".github" / "copilot-instructions.md" in written
     assert (tmp_path / ".github" / "copilot-instructions.md").is_file()
+
+
+def test_install_skips_retired_resources_in_stale_package(
+    tmp_path: Path, monkeypatch
+) -> None:
+    package_root = copy_resources(tmp_path)
+    additional = package_root / "resources" / "rules" / "additional"
+    (additional / "plan_template.md").write_text("stale template", encoding="utf-8")
+    (additional / "lesson_learned.md").write_text("stale lessons", encoding="utf-8")
+    monkeypatch.setattr(installer_module, "files", lambda _package: package_root)
+    target = tmp_path / "target"
+
+    install("codex", target)
+
+    manifest = json.loads(
+        (target / ".agent_rules" / "manifest.json").read_text(encoding="utf-8")
+    )
+    for name in ("plan_template.md", "lesson_learned.md"):
+        relative = Path(".agent_rules/additional") / name
+        assert not (target / relative).exists()
+        assert relative.as_posix() not in manifest["managedFiles"]
 
 
 def test_install_codex(tmp_path: Path) -> None:
@@ -214,6 +236,47 @@ def test_missing_additional_is_installed(tmp_path: Path) -> None:
     assert (
         tmp_path / ".agent_rules" / "additional" / "lesson_learned"
     ).is_dir()
+    assert not (tmp_path / ".agent_rules" / "additional" / "plan_template.md").exists()
+    assert not (tmp_path / ".agent_rules" / "additional" / "lesson_learned.md").exists()
+
+
+def test_reinstall_removes_unchanged_retired_managed_files(tmp_path: Path) -> None:
+    install("codex", tmp_path)
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    retired = {
+        ".agent_rules/additional/plan_template.md": b"old plan template",
+        ".agent_rules/additional/lesson_learned.md": b"old lesson notes",
+    }
+    for relative, content in retired.items():
+        path = tmp_path / relative
+        path.write_bytes(content)
+        data["managedFiles"][relative] = hashlib.sha256(content).hexdigest()
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+
+    result = install("codex", tmp_path)
+
+    for relative in retired:
+        assert not (tmp_path / relative).exists()
+        assert relative not in json.loads(manifest.read_text(encoding="utf-8"))["managedFiles"]
+        assert tmp_path / relative in result.removed
+
+
+def test_reinstall_preserves_modified_retired_files_and_unmanages_them(tmp_path: Path) -> None:
+    install("codex", tmp_path)
+    manifest = tmp_path / ".agent_rules" / "manifest.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    relative = ".agent_rules/additional/plan_template.md"
+    path = tmp_path / relative
+    path.write_text("original packaged template", encoding="utf-8")
+    data["managedFiles"][relative] = hashlib.sha256(b"original packaged template").hexdigest()
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    path.write_text("user-customized template", encoding="utf-8")
+
+    install("codex", tmp_path)
+
+    assert path.read_text(encoding="utf-8") == "user-customized template"
+    assert relative not in json.loads(manifest.read_text(encoding="utf-8"))["managedFiles"]
 
 
 def test_unrelated_file_is_preserved(tmp_path: Path) -> None:

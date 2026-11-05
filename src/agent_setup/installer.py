@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.resources import files
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 import json
 import hashlib
@@ -16,6 +16,7 @@ from .manifest import (
     CORE_DESTINATION,
     FUNDAMENTAL_DESTINATION,
     MANAGED_LOCAL_MANIFEST,
+    RETIRED_MANAGED_FILES,
     REQUIRED_RULE_FILES,
 )
 
@@ -30,6 +31,7 @@ class InstallResult(list[Path]):
         self.created: list[Path] = []
         self.overwritten: list[Path] = []
         self.preserved: list[Path] = []
+        self.removed: list[Path] = []
 
     @property
     def written(self) -> list[Path]:
@@ -71,6 +73,7 @@ def install(profile: str, target: str | Path) -> InstallResult:
         backups.setdefault(manifest_path, manifest_path.read_bytes() if manifest_path.is_file() else None)
         for item in plan:
             _write_bytes(item.destination, item.content, result, overwrite=item.overwrite, target=target, backups=backups)
+        _remove_retired_managed_files(target, backups, result)
         for relative in ADDITIONAL_DIRECTORIES:
             (target / Path(*relative.parts)).mkdir(parents=True, exist_ok=True)
         _write_local_manifest(target, profile, result)
@@ -91,6 +94,7 @@ def install(profile: str, target: str | Path) -> InstallResult:
     result.created.sort()
     result.overwritten.sort()
     result.preserved.sort()
+    result.removed.sort()
     return result
 
 
@@ -146,6 +150,8 @@ def _write_local_manifest(target: Path, profile: str, result: InstallResult) -> 
     old_managed = existing.get("managedFiles", {})
     managed: dict[str, str] = {}
     for relative, digest in old_managed.items():
+        if PurePosixPath(relative) in RETIRED_MANAGED_FILES:
+            continue
         path = target / Path(relative)
         if path.is_file() and sha256(path) == digest:
             managed[relative] = digest
@@ -178,6 +184,31 @@ def _write_local_manifest(target: Path, profile: str, result: InstallResult) -> 
         raise
 
 
+def _remove_retired_managed_files(
+    target: Path,
+    backups: dict[Path, bytes | None],
+    result: InstallResult,
+) -> None:
+    manifest_path = target / Path(*MANAGED_LOCAL_MANIFEST.parts)
+    if not manifest_path.is_file():
+        return
+
+    managed_files = read_install_manifest(target).get("managedFiles", {})
+    for relative in RETIRED_MANAGED_FILES:
+        relative_name = relative.as_posix()
+        expected_hash = managed_files.get(relative_name)
+        if expected_hash is None:
+            continue
+
+        path = target / Path(*relative.parts)
+        if path.is_symlink() or not path.is_file() or sha256(path) != expected_hash:
+            continue
+
+        backups.setdefault(path, path.read_bytes())
+        path.unlink()
+        result.removed.append(path)
+
+
 class InstallPlanItem:
     def __init__(self, destination: Path, content: bytes, *, overwrite: bool) -> None:
         self.destination = destination
@@ -208,8 +239,11 @@ def _build_installation_plan(
         content = _read_resource(source, Path("resources/rules/fundamental") / relative)
         resources.append((source, content, target / Path(*FUNDAMENTAL_DESTINATION.parts) / relative, True))
     for source, relative in _iter_resource_files(additional_root):
+        destination_relative = ADDITIONAL_DESTINATION.joinpath(*relative.parts)
+        if destination_relative in RETIRED_MANAGED_FILES:
+            continue
         content = _read_resource(source, Path("resources/rules/additional") / relative)
-        resources.append((source, content, target / Path(*ADDITIONAL_DESTINATION.parts) / relative, False))
+        resources.append((source, content, target / Path(*destination_relative.parts), False))
 
     adapter_destination = target / Path(*ADAPTER_DESTINATIONS[profile][0].parts)
     resources.append((adapter_source, adapter, adapter_destination, True))

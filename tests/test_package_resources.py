@@ -22,3 +22,5 @@ def test_wheel_contains_agent_markdown_resources(tmp_path: Path) -> None:
     assert (
         "agent_setup/resources/rules/fundamental/plan_template_instruction.md" in names
     )
+    assert "agent_setup/resources/rules/additional/plan_template.md" not in names
+    assert "agent_setup/resources/rules/additional/lesson_learned.md" not in names

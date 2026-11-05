@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the required layout for a Python project when generating or modifying code.
+Describe an optional example layout for a Python project when generating or modifying code.
 
 The following layout is an optional example for a new Python project. First follow the existing
 project architecture and team conventions. Use this example only when it fits the project or when

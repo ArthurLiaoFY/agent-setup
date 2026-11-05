@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the required internal layout for a Python submodule when generating or modifying implementation code.
+Describe an optional example layout for a Python submodule when generating or modifying implementation code.
 
 The following layout is an optional example for a submodule that needs multiple interchangeable
 implementations. First follow the project's existing architecture and team conventions. Use this

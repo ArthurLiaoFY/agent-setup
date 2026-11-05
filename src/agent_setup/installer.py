@@ -106,7 +106,7 @@ def read_install_manifest(target: Path) -> dict:
     destination = target / Path(*MANAGED_LOCAL_MANIFEST.parts)
     try:
         data = json.loads(destination.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise InstallError(f"Invalid installation manifest: {error}") from error
     if not isinstance(data, dict) or data.get("version") != 1:
         raise InstallError("Invalid installation manifest version")
